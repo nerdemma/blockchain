@@ -1,0 +1,21 @@
+{
+  "name": "blockchain_mining",
+  "version": "1.0.0",
+  "description": "blockchain system mining",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "mining",
+    "crypto",
+    "blockchain"
+  ],
+  "author": "@nerdemma",
+  "license": "MIT",
+  "dependencies": {
+    "crypto-js": "^4.2.0",
+    "sha256": "^0.2.0"
+  },
+  "devDependencies": {}
+}
