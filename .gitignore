@@ -1,0 +1,7 @@
+*.o
+src/*.o
+
+blockchain
+
+*.out
+*.exe
