@@ -1,5 +1,5 @@
-#include "block.h"
-#include "utils.h"
+#include "../lib/block.h"
+#include "../lib/utils.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,7 +51,7 @@ size_t offset = 0;
     memcpy(buffer + offset, &block->header.bits, sizeof(uint32_t));
     offset += sizeof(uint32_t);
 
-    memcpy(buffer + offset, &block->header.nounce, sizeof(uint32_t));
+    memcpy(buffer + offset, &block->header.nonce, sizeof(uint32_t));
 
 }
 
