@@ -1,17 +1,21 @@
-CC = cc
-CGLAGS = -Wall -Wextra -Iinclude -g
-SRCS = src/utils src/block.c src/blockchain src/main.c
+CC = gcc
+CFLAGS = -Wall -Wextra -Iinclude
+LDLIBS = -lcrypto
+
+# Todos los archivos .c que componen tu proyecto
+SRCS = $(wildcard src/*.c)
 OBJS = $(SRCS:.c=.o)
-TARGET = bin/bitcoin_c
+TARGET = blockchain
 
 all: $(TARGET)
 
 $(TARGET): $(OBJS)
-	@mkdir -p bin 
-	$(CC) $(CFLAGS) -o $	@ $^ $(LIBS)
+	$(CC) $(OBJS) -o $(TARGET) $(LDLIBS)
 
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $	@
+	$(CC) $(CFLAGS) -c $< -o $@
+
 clean:
 	rm -f src/*.o $(TARGET)
-.PHONY: all clean	
+
+.PHONY: all clean

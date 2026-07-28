@@ -21,7 +21,7 @@ else
 memset(block->header.prev_hash, 0, 32);
 }
 
-double_sha256((const uint8_t)*data, strlen(data), block->header.merkle_root);
+double_sha256((const uint8_t*)data, strlen(data), block->header.merkle_root);
     block->header.timestamp = (uint32_t)time(NULL);
     block->header.bits = bits;
     block->header.nonce = 0;
@@ -58,7 +58,7 @@ size_t offset = 0;
 void block_calculate_hash(Block *block)
 {
 uint8_t buffer[HEADER_SIZE];
-block_serial_header(block, buffer);
+block_serialize_header(block, buffer);
 double_sha256(buffer, HEADER_SIZE, block->hash);
 }
 
