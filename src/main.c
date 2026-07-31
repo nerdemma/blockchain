@@ -6,44 +6,62 @@
 
 void test_stage1_hashing()
 {
-printf("------------- ETAPA 1: Prueba de Hashing SHA 256 ------------------\n");
-uint8_t out[32];
-char hex[65];
-sha256((const uint8_t*)"", 0, out);
-hex_encode(out, 32, hex);
-printf("SHA-256(""): %s", hex);
+    printf("------------- STAGE 1: Hashing SHA 256 Test ------------------\n");
+    uint8_t out[32];
+    char hex[65];
+    sha256((const uint8_t*)"", 0, out);
+    hex_encode(out, 32, hex);
+    printf("SHA-256(\"\"): %s\n", hex);
 }
 
 int main()
 {
-test_stage1_hashing();
-uint32_t diff_bits = 16;
-printf("Creacion de Blockchain y Mineria. Dificultad: %u bits \n",diff_bits);
-Blockchain *chain = blockchain_create(diff_bits);
-char hex_hash[65];
+    test_stage1_hashing();
 
-hex_encode(chain->blocks[0]->hash,32, hex_hash);
-printf("[Genesis] Hash: %s | nonce %u \n\n"
-, hex_hash, chain->blocks[0]->header.nonce);
+    uint32_t diff_bits = 16;
+    char hex_hash[65];
 
-// minar bloque 1
-Block *b1 = block_create(chain->blocks[0]->hash, "Tx 1: Alice -> Bob (5 BTC)", diff_bits);
-mine_block(b1, diff_bits);
-blockchain_add_block(chain, b1);
-hex_encode(b1->hash, 32, hex_hash);
+    printf("\n--- Loading / Blockchain Initailization (File: %s) ---\n", CHAIN_FILE);
+    
 
-printf("[Bloque 1] Hash: %s | nonce %u \n\n"
-, hex_hash, b1->header.nonce);
+    Blockchain *chain = blockchain_init(diff_bits, CHAIN_FILE);
+    if (!chain) {
+        fprintf(stderr, "Error to initialize blockchain\n");
+        return 1;
+    }
 
-//validar cadena
-printf("¿Cadena Valida?: %s",
-    blockchain_is_valid(chain) ? "SI (OK)\n" : "NO (CORRUPTA) \n");
+    
+    printf("\n[Chain Status] Current Long: %zu Block(s)\n", chain->length);
+    for (size_t i = 0; i < chain->length; i++) {
+        hex_encode(chain->blocks[i]->hash, 32, hex_hash);
+        printf("  - Block [%zu] | Hash: %s | Nonce: %u\n", 
+               i, hex_hash, chain->blocks[i]->header.nonce);
+    }
 
-    //simulacion de ataque (manipulacion de datos)
-    printf("Simulando alteracion maliciosa en el bloque 1 \n");
-    b1->data[0]='X';
-    printf("¿cadena valida tras alteracion?: %s"
-    , blockchain_is_valid(chain) ? "SI (OK)\n" : "NO (DETECTADA) \n");
+    
+    Block *last_block = chain->blocks[chain->length - 1];
+
+    
+    printf("\nMining new block [%zu]...\n", chain->length);
+    
+    char tx_data[64];
+    snprintf(tx_data, sizeof(tx_data), "Tx %zu: Alice -> Bob (%zu BTC)", chain->length, chain->length * 5);
+
+    Block *new_block = block_create(last_block->hash, tx_data, diff_bits);
+    mine_block(new_block, diff_bits);
+
+    
+    if (blockchain_add_block(chain, new_block)) {
+        blockchain_save_block(new_block, CHAIN_FILE);
+        hex_encode(new_block->hash, 32, hex_hash);
+        printf("[+] Bloque [%zu] saved on disk | Hash: %s\n", chain->length - 1, hex_hash);
+    }
+
+    
+    printf("\nValid chain?: %s\n",
+        blockchain_is_valid(chain) ? "YES (OK)" : "NO (CORRUPT)");
+
+
     blockchain_free(chain);
     return 0;
 }
