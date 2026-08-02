@@ -1,8 +1,8 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude
-LDLIBS = -lcrypto
+LDLIBS = -lcrypto -lpthread
 
-# Todos los archivos .c que componen tu proyecto
+
 SRCS = $(wildcard src/*.c)
 OBJS = $(SRCS:.c=.o)
 TARGET = blockchain

@@ -1,8 +1,28 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <sys/socket.h>
+
+#include "../lib/blockchain.h"
+#include "../lib/net.h"
+#include "../lib/mempool.h"
+
 #include "../lib/utils.h"
 #include "../lib/block.h"
-#include "../lib/blockchain.h"
+#include "../lib/discovery.h"
+
+void print_menu()
+{
+printf("\n=========BLOCKCHAIN NODE =========\n");
+printf("1. view the blockchain status\n");
+printf("2. Mining the block with pending transactions\n");
+printf("3. Create testing transaction\n");
+printf("4. Connect to peer p2p\n");
+printf("5. Exit\n");
+printf("Select Option:");
+}
+
 
 void test_stage1_hashing()
 {
@@ -14,54 +34,91 @@ void test_stage1_hashing()
     printf("SHA-256(\"\"): %s\n", hex);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-    test_stage1_hashing();
+uint32_t diff_bits = 16;
+uint16_t tcp_port = DEFAULT_PORT;
 
-    uint32_t diff_bits = 16;
-    char hex_hash[65];
+if(argc > 1){ tcp_port= (uint16_t)atoi(argv[1]);}
+Blockchain *chain = blockchain_init(diff_bits, CHAIN_FILE);
+Mempool mp;
+mempool_init(&mp);
 
-    printf("\n--- Loading / Blockchain Initailization (File: %s) ---\n", CHAIN_FILE);
+// initialize the p2p server at second layer or config port
+int server_fd = start_server(tcp_port);
+int option = 0;
+
+discovery_start(tcp_port);
+
+while(option !=5)
+{
+
+    print_menu();
+    if(scanf("%d",&option) !=1 ) break;
     
-
-    Blockchain *chain = blockchain_init(diff_bits, CHAIN_FILE);
-    if (!chain) {
-        fprintf(stderr, "Error to initialize blockchain\n");
-        return 1;
+    switch(option)
+    {
+    case 1:
+    printf("[Local Chain] Total Blocks: %zu | valid %s\n",
+    chain->length, blockchain_is_valid(chain)? "YES" : "NO");
+        for(size_t i = 0; i < chain->length; i++)
+        {
+        printf("- Bloque [%zu] Hash loaded sucessfully\n", i);   
+        }
+    break;     
+    
+    case 2:
+    {
+    Block *last = chain->blocks[chain->length -1];
+    printf("\nMining block [%zu]...\n", chain->length);
+    Block *new_block = block_create(last->hash,"Mempool block Tx",diff_bits);
+    mine_block(new_block,diff_bits);    
+    
+    if(blockchain_add_block(chain,new_block))
+    {
+    blockchain_save_block(new_block, CHAIN_FILE);
+    mempool_clear(&mp); 
+    printf("[+] Block mined and persisted sucessfully\n");   
+    }
+    break;
+    }
+   
+    case 3:
+    {
+    Transaction tx;
+    mempool_add_tx(&mp, &tx);
+    break;   
     }
 
+    case 4:
+    {
+    char ip[64];
+    int p;
+    printf("PEER IP ADDRESS: ");
+    scanf("%s", ip);
+    printf("PORT: ");    
+    scanf("%d", &p);
     
-    printf("\n[Chain Status] Current Long: %zu Block(s)\n", chain->length);
-    for (size_t i = 0; i < chain->length; i++) {
-        hex_encode(chain->blocks[i]->hash, 32, hex_hash);
-        printf("  - Block [%zu] | Hash: %s | Nonce: %u\n", 
-               i, hex_hash, chain->blocks[i]->header.nonce);
+    int peer_fd = connect_to_peer(ip, p);    
+    if(peer_fd >= 0)
+    {
+        MsgVersion v = {1, 1700000000, chain->length};
+        send_message(peer_fd, MSG_VERSION, &v, sizeof(MsgVersion));
+    }    
+    break;
     }
 
-    
-    Block *last_block = chain->blocks[chain->length - 1];
+    case 5:
+    printf("Closing..\n");
+    break;
 
-    
-    printf("\nMining new block [%zu]...\n", chain->length);
-    
-    char tx_data[64];
-    snprintf(tx_data, sizeof(tx_data), "Tx %zu: Alice -> Bob (%zu BTC)", chain->length, chain->length * 5);
+    default:
+    printf("Option not valid\n");
+    break;
+}
+}
 
-    Block *new_block = block_create(last_block->hash, tx_data, diff_bits);
-    mine_block(new_block, diff_bits);
-
-    
-    if (blockchain_add_block(chain, new_block)) {
-        blockchain_save_block(new_block, CHAIN_FILE);
-        hex_encode(new_block->hash, 32, hex_hash);
-        printf("[+] Bloque [%zu] saved on disk | Hash: %s\n", chain->length - 1, hex_hash);
-    }
-
-    
-    printf("\nValid chain?: %s\n",
-        blockchain_is_valid(chain) ? "YES (OK)" : "NO (CORRUPT)");
-
-
+if (server_fd >= 0) close(server_fd);
     blockchain_free(chain);
     return 0;
 }

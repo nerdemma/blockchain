@@ -1,0 +1,36 @@
+#ifndef NET_H
+#define NET_H
+
+#include <stdint.h>
+#include <stddef.h>
+
+#define DEFAULT_PORT 8333
+#define MAGIC_BYTES 0xD9B4BEF9
+
+// tipos de mensaje
+typedef enum {
+MSG_VERSION =1,
+MSG_VERRACK, 
+MSG_GETBLOCKS,
+MSG_BLOCK, 
+MSG_TX,
+} MessageType;
+
+typedef struct __attribute__((__packed__)) {
+ uint32_t magic;
+ uint32_t type;
+ uint32_t length;
+} Netheader;
+
+typedef struct __attribute__((__packed__))
+{
+uint32_t version;
+uint32_t timestamp;
+size_t chain_length;
+} MsgVersion;
+
+int start_server(int port);
+int connect_to_peer(const char *ip, int port);
+int send_message(int socket_fd, MessageType type, const void *payload, uint32_t payload_size);
+#endif // NET_H
+
