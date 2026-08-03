@@ -6,7 +6,7 @@
 
 typedef struct{
 
-    Transaction transactions[MAX_MEMPOOL_SIZE];
+    Transaction *transactions;
     size_t count;
 } Mempool;
 

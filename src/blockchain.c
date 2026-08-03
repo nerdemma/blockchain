@@ -38,27 +38,32 @@ block->header.nonce = 0;
 
 Blockchain* blockchain_create(uint32_t difficulty_bits)
 {
-Blockchain *chain = (Blockchain*)malloc(sizeof(Blockchain));
-if(!chain) return NULL;
-chain->capacity = 4;
-chain->length = 0;
-chain->difficulty_bits = difficulty_bits;
-chain->blocks = (Block**)malloc(sizeof(Block*) *chain->capacity);
-    if(!chain->blocks)
-    {
-    free(chain);
-    return NULL;    
+    Blockchain *chain = (Blockchain*)malloc(sizeof(Blockchain));
+    if (!chain) return NULL;
+
+    // 1. Crear transacción de origen (Coinbase / Génesis)
+    Transaction genesis_tx;
+    transaction_create(&genesis_tx, "SYSTEM", "GENESIS_REWARD_ADDRESS", 50.0);
+    strncpy(genesis_tx.data, "Genesis Block: Genesis 2026", TX_DATA_LEN - 1);
+
+    // 2. Crear bloque génesis (pasa la dirección de genesis_tx y cantidad 1)
+    Block *genesis = block_create(NULL, &genesis_tx, 1, difficulty_bits);
+    if (!genesis) {
+        free(chain);
+        return NULL;
     }
 
-// create and mining the genesis block
-Block *genesis = block_create(NULL, "Genesis Block: Nerdemma 2026", difficulty_bits);
-mine_block(genesis, difficulty_bits);
-chain->blocks[chain->length++] = genesis;
-return chain;
+    // Minar bloque génesis
+    mine_block(genesis, difficulty_bits);
+
+    // Asignar al arreglo de la cadena
+    chain->blocks = (Block**)malloc(sizeof(Block*));
+    chain->blocks[0] = genesis;
+    chain->length = 1;
+    chain->difficulty_bits = difficulty_bits;
+
+    return chain;
 }
-
-
-
 
 int blockchain_add_block(Blockchain *chain, Block *new_block)
 {
