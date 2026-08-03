@@ -1,8 +1,18 @@
+#include "../lib/p2p_sync.h"
 #include "../lib/net.h"
+#include "../lib/block.h"
 #include "../lib/blockchain.h"
+
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <unistd.h>
-#include <sys/socket.h>
+
+#include <sys/select.h>
+#include <arpa/inet.h>
+
+P2PServerContex g_p2p_ctx = {0};
 
 void handle_peer_connection(int peer_fd, Blockchain *chain)
 {

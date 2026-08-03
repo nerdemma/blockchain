@@ -53,7 +53,7 @@ for(int i = 0; i < MAX_PEERS; i++)
         printf("[P2P Pool] Peer FD %d removed.\n", socket_fd);
         break;
     }
-}
+  }
 pthread_mutex_unlock(&pool->lock);
 }
 
