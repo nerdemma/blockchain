@@ -17,7 +17,7 @@ pthread_t thread;
 
 extern P2PServerContex g_p2p_ctx;
 
-int p2p_sync_start(int serverfd. Blockchain *chain,  Mempool *mempool, PeerPool *peer_pool);
+int p2p_sync_start(int serverfd, Blockchain *chain,  Mempool *mempool, PeerPool *peer_pool);
 void p2p_sync_stop(void);
 
 

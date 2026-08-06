@@ -1,6 +1,5 @@
 #ifndef BLOCK_H
 #define BLOCK_H
-
 #include <stdint.h>
 #include <stddef.h>
 #include <time.h>
@@ -15,6 +14,7 @@ typedef struct {
     uint32_t timestamp;
     uint32_t bits;
     uint32_t nonce;
+    uint32_t tx_count;
 } BlockHeader;
 
 typedef struct {
@@ -33,6 +33,5 @@ void   block_calculate_hash(Block *block);
 
 size_t block_get_serialized_size(const Block *block);
 size_t block_serialize(const Block *block, uint8_t *buffer);
-Block* block_deserialize(const uint8_t *buffer, size_t buffer_size);
-
+Block*  block_deserialize(const uint8_t *buffer, size_t length);
 #endif // BLOCK_H

@@ -82,20 +82,63 @@ size_t block_serialize(const Block *block, uint8_t *buffer)
     if (!block || !buffer) return 0;
     
     size_t offset = 0;
-    block_serialize_header(block, buffer);
-    offset += HEADER_SIZE;
+    memcpy(buffer + offset, &block->header, sizeof(BlockHeader));
+    offset += sizeof(BlockHeader);
 
-    uint32_t tx_count = (uint32_t)block->tx_count;
-    memcpy(buffer + offset, &tx_count, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
+    memcpy(buffer + offset, &block->hash, 32);
+    offset += 32;
 
-    for (uint32_t i = 0; i < tx_count; i++) {
-        size_t bytes_written = transaction_serialize(&block->transactions[i], buffer + offset);
-        offset += bytes_written;
+    size_t txs_bytes = block->tx_count * sizeof(Transaction);
+    if (block->tx_count >0 && block->transactions) {
+        memcpy(buffer + offset, block->transactions, txs_bytes);
+        offset += txs_bytes;
     }
     
     return offset;
 }
+
+
+Block * block_deserialize(const uint8_t *buffer, size_t length)
+{
+
+    if(!buffer || length < sizeof(BlockHeader) + 32) return NULL;
+  
+    Block *block = (Block*)malloc(sizeof(Block));   
+    if(!block) return NULL;
+  
+    memset(block,0, sizeof(Block));
+    size_t offset=0;
+
+    memcpy(&block->header, buffer + offset, sizeof(BlockHeader));
+    offset += sizeof(BlockHeader);
+
+    memcpy(block->hash, buffer + offset, 32);
+    offset+=32;
+
+    block->tx_count = block->header.tx_count;
+
+if(block->tx_count > 0)
+{
+size_t expected_tx_bytes = block->tx_count * sizeof(Transaction);
+    if(length < offset + expected_tx_bytes)
+    {
+    free(block);
+    return NULL;
+    }
+
+
+block->transactions = (Transaction*)malloc(expected_tx_bytes);
+}
+
+else
+{
+block->transactions = NULL;
+}
+block->data = NULL;
+return block;
+}
+
+
 
 void block_free(Block *block)
 {

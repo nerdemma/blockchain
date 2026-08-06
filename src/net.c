@@ -100,3 +100,30 @@ if(payload_size > 0 && payload != NULL)
 }
 return 0;
 }
+
+int receive_message(int socket_fd, uint8_t *msg_type, uint8_t **payload, uint32_t *payload_len)
+{
+if (socket_fd < 0 || !msg_type || !payload || !payload_len) return 1;
+if (recv(socket_fd, msg_type, 1, 0) <= 0) return -1;
+if (recv(socket_fd,payload_len, sizeof(uint32_t),0) <=0 ) return -1;
+
+if(*payload_len > 0)
+{
+*payload = (uint8_t*)malloc(*payload_len);
+if(!payload) return -1;
+ssize_t bytes_read = recv(socket_fd, *payload, *payload_len, MSG_WAITALL);
+
+if(bytes_read <=0)
+{
+free(*payload);
+*payload = NULL;
+return -1;
+}
+else
+{
+*payload = NULL;
+}
+}
+return 0;
+}
+

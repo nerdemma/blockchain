@@ -29,8 +29,10 @@ uint32_t timestamp;
 size_t chain_length;
 } MsgVersion;
 
+int send_message(int socket_fd, MessageType type, const void *payload, uint32_t payload_size);
+int receive_message(int socket_fd, uint8_t *msg_type, uint8_t **payload, uint32_t *payload_len);
+
 int start_server(int port);
 int connect_to_peer(const char *ip, int port);
-int send_message(int socket_fd, MessageType type, const void *payload, uint32_t payload_size);
 #endif // NET_H
 

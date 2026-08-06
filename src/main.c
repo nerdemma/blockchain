@@ -11,7 +11,7 @@
 #include "../lib/block.h"
 #include "../lib/discovery.h"
 #include "../lib/peer_pool.h"
-
+#include "../lib/p2p_sync.h"
 PeerPool g_peer_pool;
 
 void print_menu(void)
@@ -57,6 +57,12 @@ int main(int argc, char *argv[])
     // 3. Inicializar Servidores
     int server_fd = start_server(tcp_port);
     discovery_start(tcp_port);
+
+    if (p2p_sync_start(server_fd, chain, &mp, &g_peer_pool) == 0) 
+    {
+    printf("[+] Servidor p2p escuchando segundo plano del puerto: %d\n",tcp_port);
+    }
+
 
     int option = 0;
 
@@ -193,9 +199,9 @@ int main(int argc, char *argv[])
     }
 
     // Liberación segura de recursos
-    if (server_fd >= 0) close(server_fd);
+    p2p_sync_stop();
+    if(server_fd >=0) close(server_fd);
     mempool_clear(&mp);
     blockchain_free(chain);
-
     return 0;
 }

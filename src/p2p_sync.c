@@ -1,73 +1,174 @@
 #include "../lib/p2p_sync.h"
-#include "../lib/net.h"
+#include "../lib/net.h"          
 #include "../lib/block.h"
-#include "../lib/blockchain.h"
-
+#include "../lib/transaction.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
 #include <unistd.h>
-
 #include <sys/select.h>
 #include <arpa/inet.h>
 
 P2PServerContex g_p2p_ctx = {0};
 
-void handle_peer_connection(int peer_fd, Blockchain *chain)
+static void handle_peer_message(int peer_fd, uint8_t type,const uint8_t *payload, uint32_t length)
 {
-Netheader header;
-//read header
-    if(recv(peer_fd, &header, sizeof(Netheader),0) <= 0)
+(void)peer_fd;    
+switch(type)
+{
+    case MSG_VERSION:
     {
-    close(peer_fd); 
-    return;  
+    if(length >= sizeof(MsgVersion))
+    {
+    MsgVersion *v = (MsgVersion*)payload;
+    printf("\n[P2P] MsgVersion recibido: Versión=%u", v->version);
+    }
+    break;
     }
 
-if(header.magic != MAGIC_BYTES)
-{
-    printf("[Error] Invalid package recived by magic bytes \n");
-    close(peer_fd);
-    return;
-}
-
-switch (header.type)
-{
-case MSG_VERSION:
-{
-MsgVersion v;
-recv(peer_fd, &v, sizeof(MsgVersion),0);
-
-printf("[P2P] Peer version recived. Chain hight: %zu (Our: %zu)\n"
-,v.chain_length, chain->length);
-
-// respond by VERACK
-send_message(peer_fd, MSG_VERRACK, NULL, 0);
-
-// if the peeer have a long chain, give their blocks
-if(v.chain_length > chain->length)
-{
-printf("[CONSENSUS] The peer chain is too long. petition blocks \n");
-send_message(peer_fd, MSG_GETBLOCKS, NULL, 0);
-}
-break;
-}
-case MSG_GETBLOCKS:
-{
-printf("[P2P] peer giving our chain, send blocks...\n");
-// transmit each block serialized by peer
-    for (size_t i = 0; i < chain->length; i++)
+    case MSG_TX:
     {
-        uint8_t buf[HEADER_SIZE];
-        block_serialize_header(chain->blocks[i], buf);
-        send_message(peer_fd, MSG_BLOCK, buf, HEADER_SIZE);
+        if(length == sizeof(Transaction))
+        {
+        Transaction tx;
+        memcpy(&tx, payload, sizeof(Transaction));
+        if(transaction_is_valid(&tx))
+        {
+            printf("[P2P] New recieved transaction and added in mempool\n");
+        }
+
+        }
+    
+    break;    
     }
-break;
+
+    case MSG_BLOCK:
+    {
+        Block *incoming_block = block_deserialize(payload, length);
+        if(incoming_block)
+        {
+        if(blockchain_add_block(g_p2p_ctx.chain,incoming_block))
+        {
+        blockchain_save_block(incoming_block, CHAIN_FILE);
+        printf("\n[P2P] New block received in the network and validaded in the local blockchain.\n");         
+        }    
+        else
+        {
+        block_free(incoming_block);    
+        }
+        }
+    break;
+    }
+    default:
+    break;
+
 }
-default:
-printf("[P2P] Type of message not driving: %u\n", header.type);
-break;
 }
 
 
+static void* p2p_listener_thread(void *arg)
+{
+ (void)arg;
+ fd_set read_fds;
+ struct timeval timeout;
+
+    while(g_p2p_ctx.running)
+    {
+        FD_ZERO(&read_fds);
+        int max_fd = g_p2p_ctx.server_fd;
+
+        if(g_p2p_ctx.server_fd >= 0)
+        {
+        FD_SET(g_p2p_ctx.server_fd,&read_fds);
+        }
+
+        // agregar los peers activos del pool al conjunto select
+        pthread_mutex_lock(&g_p2p_ctx.peer_pool->lock);
+
+        for(size_t i = 0; i < g_p2p_ctx.peer_pool->count; i++)
+        {
+        int pfd = g_p2p_ctx.peer_pool->peers[i].socket_fd;
+        if(pfd >= 0)
+        {
+        FD_SET(pfd, &read_fds);
+        if(pfd > max_fd) max_fd = pfd;   
+        }
+
+        pthread_mutex_unlock(&g_p2p_ctx.peer_pool->lock);  
+        timeout.tv_sec=1;
+        timeout.tv_usec=0;
+        int activity = select(max_fd + 1, &read_fds, NULL, NULL, &timeout);
+        if(activity < 0 || !g_p2p_ctx.running) continue;
+
+        if(g_p2p_ctx.server_fd >= 0 && FD_ISSET(g_p2p_ctx.server_fd, &read_fds))
+        {   
+        struct sockaddr_in client_addr;
+        socklen_t addr_len = sizeof(client_addr);
+        int new_socket = accept(g_p2p_ctx.server_fd, (struct sockaddr*)&client_addr, &addr_len);
+
+        if(new_socket >=0)
+        {
+        char client_ip[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, client_ip, INET_ADDRSTRLEN);
+        uint16_t client_port = ntohs(client_addr.sin_port);
+        peer_pool_add(g_p2p_ctx.peer_pool, new_socket, client_ip, client_port); 
+        }
+        }
+
+        // leer los datos de los peer conectados
+        pthread_mutex_lock(&g_p2p_ctx.peer_pool->lock);
+
+        for (size_t i = 0; i < g_p2p_ctx.peer_pool->count; i++)
+        {
+        int pfd = g_p2p_ctx.peer_pool->peers[i].socket_fd;
+                if(pfd >=0 && FD_ISSET(pfd, &read_fds))
+                {               
+                uint8_t msg_type;
+                uint32_t payload_len;
+                uint8_t *payload = NULL;
+
+                    if(receive_message(pfd, &msg_type, &payload, &payload_len) == 0)
+                    {
+                    handle_peer_message(pfd, msg_type, payload, payload_len);
+                    if(payload) free(payload);
+                    }
+                    else
+                    {
+                    close(pfd);
+                    peer_pool_remove(g_p2p_ctx.peer_pool, pfd);
+                    i--;
+                    }   
+                }
+        }
+    }        
+pthread_mutex_unlock(&g_p2p_ctx.peer_pool->lock);
+
+}
+return NULL;
+}
+
+
+int p2p_sync_start(int server_fd, Blockchain *chain, Mempool *mempool, PeerPool *peer_pool)
+{
+g_p2p_ctx.server_fd = server_fd;
+g_p2p_ctx.chain = chain;
+g_p2p_ctx.mempool = mempool;
+g_p2p_ctx.peer_pool = peer_pool;
+g_p2p_ctx.running = true;
+
+if (pthread_create(&g_p2p_ctx.thread, NULL, p2p_listener_thread, NULL) != 0) 
+{
+perror("[!] Error al crear el hilo P2P \n"); 
+return -1;   
+}
+return 0;
+}
+
+void p2p_sync_stop(void)
+{
+    if(g_p2p_ctx.running){
+
+        g_p2p_ctx.running=false;
+        pthread_join(g_p2p_ctx.thread, NULL);
+    }
 }
