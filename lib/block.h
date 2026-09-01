@@ -29,9 +29,12 @@ Block* block_create(const uint8_t prev_hash[32], const Transaction *txs, uint32_
 void   block_free(Block *block);
 
 void   block_serialize_header(const Block *block, uint8_t buffer[HEADER_SIZE]);
+void   block_calculate_hash_out(const Block *block, uint8_t out_hash[32]);
 void   block_calculate_hash(Block *block);
+int    block_verify_pow(const Block *block, uint32_t diff_bits);
 
 size_t block_get_serialized_size(const Block *block);
 size_t block_serialize(const Block *block, uint8_t *buffer);
-Block*  block_deserialize(const uint8_t *buffer, size_t length);
+Block* block_deserialize(const uint8_t *buffer, size_t length);
+
 #endif // BLOCK_H

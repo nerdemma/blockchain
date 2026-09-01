@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <arpa/inet.h>
 #include <sys/socket.h>
+#include <sys/time.h>
 
 int start_server(int port)
 {
@@ -49,32 +50,26 @@ return server_fd;
 
 int connect_to_peer(const char *ip, int port)
 {
-int sock=0;
-struct sockaddr_in serv_addr;
+int fd = socket(AF_INET, SOCK_STREAM, 0);
+if(fd < 0) return -1;
 
-if((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-{
-printf("\n Error to create client socket \n");
-return -1;
-}
+struct timeval tv;
+tv.tv_sec=3;
+tv.tv_usec=0;
+setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, (const char*)&tv, sizeof(tv));
 
-serv_addr.sin_family = AF_INET;
-serv_addr.sin_port = htons(port);
+struct sockaddr_in addr;
+memset(&addr, 0, sizeof(addr));
+addr.sin_family = AF_INET;
+addr.sin_port = htons(port);
+inet_pton(AF_INET, ip, &addr.sin_addr);
 
-    if(inet_pton(AF_INET,ip, &serv_addr.sin_addr)<=0)
+    if(connect(fd, (struct sockaddr *)&addr, sizeof(addr)) < 0)
     {
-    printf("\n IP Address Invalid or Not Supported\n");
+    close(fd);
     return -1;
     }
-
-    if(connect(sock,(struct sockaddr *)&serv_addr, sizeof(serv_addr) <= 0))
-    {
-        printf("conection failed by peer");
-        return -1;
-    }
-
-    printf("[P2P] Connected sucessfully with the peer: %s:%d\n", ip, port);
-    return sock;
+return fd;    
 }
 
 int send_message(int socket_fd, MessageType type, const void *payload, uint32_t payload_size)
