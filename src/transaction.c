@@ -4,18 +4,16 @@
 #include <string.h>
 #include <time.h>
 
-void transaction_create(Transaction *tx, const char *sender, const char *recipient, double amount)
+void transaction_create(Transaction *tx, const char *sender, const char *receiver, double amount, double fee)
 {
     if (!tx) return;
     memset(tx, 0, sizeof(Transaction));
     
-    if (sender) strncpy(tx->sender, sender, ADDRESS_LEN - 1);
-    if (recipient) strncpy(tx->recipient, recipient, ADDRESS_LEN - 1);
+    if (sender) { strncpy(tx->sender, sender, sizeof(tx->sender) - 1); }
+    if (receiver) { strncpy(tx->receiver, receiver, sizeof(tx->receiver) - 1); }
     
     tx->amount = amount;
-    tx->timestamp = (uint64_t)time(NULL);
-    
-    transaction_calculate_hash(tx, tx->tx_hash);
+    tx->fee = fee;
 }
 
 void transaction_calculate_hash(Transaction *tx, uint8_t out_hash[32])
@@ -29,7 +27,7 @@ void transaction_calculate_hash(Transaction *tx, uint8_t out_hash[32])
     memcpy(buffer + offset, tx->sender, ADDRESS_LEN);
     offset += ADDRESS_LEN;
     
-    memcpy(buffer + offset, tx->recipient, ADDRESS_LEN);
+    memcpy(buffer + offset, tx->receiver, ADDRESS_LEN);
     offset += ADDRESS_LEN;
     
     memcpy(buffer + offset, &tx->amount, sizeof(double));
@@ -45,7 +43,7 @@ int transaction_is_valid(const Transaction *tx)
 {
     if (!tx) return 0;
     if (tx->amount <= 0.0) return 0;
-    if (strlen(tx->sender) == 0 || strlen(tx->recipient) == 0) return 0;
+    if (strlen(tx->sender) == 0 || strlen(tx->receiver) == 0) return 0;
     
     // Verificar que el hash coincida
     uint8_t calc_hash[32];

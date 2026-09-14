@@ -1,6 +1,27 @@
 #include "../lib/utils.h"
 #include <stdio.h>
 #include <openssl/evp.h>
+#include "../lib/blockchain.h"
+
+
+void print_blockchain_json(const Blockchain *chain)
+{
+if(!chain) return;
+printf("{\"status\":\"success\",\"data\":[");
+for(size_t i=0; i < chain->length; i++)
+    {
+    Block *b = chain->blocks[i];
+    printf("{\"index\":%u,\"hash\":\"%s\",\"prev_hash\":\"%s\",\"tx_count\":%u}%s",
+    
+        b->index,
+        b->hash,
+        b->prev_hash,
+        b->tx_count,
+        (i < chain->length - 1) ? "," : "");
+
+    printf("]}\n");
+}
+}
 
 void sha256(const uint8_t *data, size_t len, uint8_t out[32])
 {

@@ -1,7 +1,8 @@
 *.o
 src/*.o
 
-blockchain
+node_cli
+node_daemon
 
 *.out
 *.exe

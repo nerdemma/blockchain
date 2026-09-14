@@ -4,6 +4,8 @@
 #include <string.h>
 #include <unistd.h>
 
+PeerPool g_peer_pool;
+
 
 void peer_pool_init(PeerPool *pool)
 {

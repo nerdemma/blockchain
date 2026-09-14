@@ -9,11 +9,14 @@
 
 // tipos de mensaje
 typedef enum {
-MSG_VERSION =1,
-MSG_VERRACK, 
-MSG_GETBLOCKS,
-MSG_BLOCK, 
-MSG_TX,
+    MSG_VERSION = 1,
+    MSG_TX      = 2,
+    MSG_BLOCK   = 3,
+    MSG_TRANSACTION = 1,
+    MSG_PRE_PREPARE,
+    MSG_PREPARE, 
+    MSG_COMMIT,
+    MSG_ROUND_CHANGE,
 } MessageType;
 
 typedef struct __attribute__((__packed__)) {

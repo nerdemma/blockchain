@@ -8,15 +8,16 @@
 #define TX_DATA_LEN 128
 
 typedef struct {
-    char sender[ADDRESS_LEN];
-    char recipient[ADDRESS_LEN];
+    char sender[32];
+    char receiver[32];
     double amount;
     uint64_t timestamp;
     uint8_t tx_hash[32];
+    double fee;
     char data[TX_DATA_LEN];
 } Transaction;
 
-void transaction_create(Transaction *tx, const char *sender, const char *recipient, double amount);
+void transaction_create(Transaction *tx, const char *sender, const char *receiver, double amount, double fee);
 void transaction_calculate_hash(Transaction *tx, uint8_t out_hash[32]);
 int  transaction_is_valid(const Transaction *tx);
 

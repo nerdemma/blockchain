@@ -9,10 +9,10 @@
 #include "../lib/peer_pool.h"
 #include "../lib/p2p_sync.h"
 
-PeerPool g_peer_pool;
+
 int main(int argc, char *argv[])
 {
-uint32_t diff_bits = 16;
+
 uint16_t tcp_port = DEFAULT_PORT;
 
 if(argc > 1)
@@ -21,26 +21,27 @@ tcp_port = (uint16_t)atoi(argv[1]);
 }
 
 peer_pool_init(&g_peer_pool);
-Blockchain *chain = blockchain_init(diff_bits, CHAIN_FILE);
+Blockchain *chain = blockchain_init(CHAIN_FILE);
 
 if(!chain)
 {
-fprintf(stderr,"[!] Error critico: No se pudo inicializar la blockchain. \n");
+fprintf(stderr,"[Critical Error] Blockchain not initializng.\n");
 return 1;
 }
 
 Mempool mp;
 mempool_init(&mp);
-
+mempool_load(&mp, MEMPOOL_FILE);
+printf("[Initialing] Demon P2P. \n[Mempool] Loaded with %zu transactions.\n", mp.count);
 int server_fd = start_server(tcp_port);
 discovery_start(tcp_port);
 
 if (p2p_sync_start(server_fd, chain, &mp, &g_peer_pool) == 0)
 {
-printf("[+] Demon P2P corriendo en el puerto %d. Preciona Ctrl+C para salir \n", tcp_port);
+printf("[Demon P2P] Running in port:%d. Press Ctrl+C to exit \n", tcp_port);
 }
 
-// bucle del demon en segundo plano
+
 while(1)
 {
 sleep(1);

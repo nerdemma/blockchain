@@ -13,6 +13,7 @@ Mempool *mempool;
 PeerPool *peer_pool;
 bool running;
 pthread_t thread;
+const ValidatorSet *val_set;
 } P2PServerContex;
 
 extern P2PServerContex g_p2p_ctx;

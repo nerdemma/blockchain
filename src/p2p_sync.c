@@ -45,18 +45,21 @@ switch(type)
     case MSG_BLOCK:
     {
         Block *incoming_block = block_deserialize(payload, length);
-        if(incoming_block)
+        if(!incoming_block)
         {
-        if(blockchain_add_block(g_p2p_ctx.chain,incoming_block))
+            break;
+        }
+
+        
+        if(blockchain_add_block(g_p2p_ctx.chain, incoming_block, g_p2p_ctx.val_set) == 0)
         {
         blockchain_save_block(incoming_block, CHAIN_FILE);
-        printf("\n[P2P] New block received in the network and validaded in the local blockchain.\n");         
         }    
         else
         {
         block_free(incoming_block);    
         }
-        }
+    
     break;
     }
     default:
